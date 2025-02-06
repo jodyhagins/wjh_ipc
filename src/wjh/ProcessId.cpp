@@ -7,6 +7,7 @@
 #include "ProcessId.hpp"
 
 #include <cstdio>
+#include <cstring>
 #include <limits>
 #include <sstream>
 
@@ -65,7 +66,7 @@ start_time_of(pid_t pid)
         (start_time_jiffies % hz) * (1'000'000 / hz));
 
     // Get system boot time (CLOCK_BOOTTIME)
-    struct timespec boot_ts, real_ts;
+    ::timespec boot_ts, real_ts;
     if (clock_gettime(CLOCK_REALTIME, &real_ts) == -1 ||
         clock_gettime(CLOCK_BOOTTIME, &boot_ts) == -1)
     {
@@ -81,7 +82,7 @@ std::optional<::timeval>
 start_time_of(pid_t pid)
 {
     errno = 0;
-    struct proc_bsdinfo bsdinfo;
+    ::proc_bsdinfo bsdinfo;
     int ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsdinfo, sizeof(bsdinfo));
     if (std::size_t(ret) != sizeof(bsdinfo)) {
         return std::nullopt;
