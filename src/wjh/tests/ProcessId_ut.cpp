@@ -13,6 +13,7 @@
 #include <sys/wait.h>
 
 #include <cstdlib>
+#include <cstring>
 #include <new>
 
 namespace {
@@ -22,8 +23,10 @@ TEST_SUITE("ProcessId")
 {
     TEST_CASE("Can zero initialize")
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Walloca"
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Walloca"
+#endif
         auto const storage = alloca(sizeof(ProcessId));
         std::memset(storage, 0xff, sizeof(ProcessId));
 
@@ -35,7 +38,9 @@ TEST_SUITE("ProcessId")
         std::memset(check, 0x00, sizeof(ProcessId));
         id = ::new (storage) ProcessId{};
         CHECK(std::memcmp(check, id, sizeof(ProcessId)) == 0);
-#pragma clang diagnostic pop
+#if defined(__clang__)
+    #pragma clang diagnostic pop
+#endif
     }
 
     TEST_CASE("Can get my own id")
@@ -101,7 +106,7 @@ TEST_SUITE("ProcessId")
 
     auto to_string = [](::timeval const & tv) {
         char buffer[64];
-        struct tm tm_time;
+        ::tm tm_time;
         localtime_r(&tv.tv_sec, &tm_time);
         strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_time);
         snprintf(

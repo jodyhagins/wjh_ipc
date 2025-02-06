@@ -17,6 +17,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <iostream>
 #include <latch>
@@ -139,8 +140,10 @@ TEST_SUITE("ProcessIdLock")
 
     TEST_CASE("Can zero initialize")
     {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Walloca"
+#if defined(__clang__)
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Walloca"
+#endif
         auto const sz = sizeof(ProcessIdLock);
         auto const storage = alloca(sz);
         std::memset(storage, 0xff, sz);
@@ -153,7 +156,9 @@ TEST_SUITE("ProcessIdLock")
         std::memset(check, 0x00, sz);
         lock = ::new (storage) ProcessIdLock{};
         CHECK(std::memcmp(check, lock, sz) == 0);
-#pragma clang diagnostic pop
+#if defined(__clang__)
+    #pragma clang diagnostic pop
+#endif
     }
 
     TEST_CASE("Can lock and unlock")
