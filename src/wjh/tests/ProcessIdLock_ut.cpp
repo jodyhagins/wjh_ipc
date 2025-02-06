@@ -31,6 +31,12 @@
 
 namespace {
 
+auto
+lock_guard(auto & lock)
+{
+    return std::lock_guard<std::remove_reference_t<decltype(lock)>>(lock);
+}
+
 TEST_SUITE("ProcessIdLock")
 {
     using wjh::ProcessIdLock;
@@ -267,7 +273,7 @@ TEST_SUITE("ProcessIdLock")
                     // Now do work
                     for (int k = 0; k < 10000; ++k) {
                         std::this_thread::yield();
-                        auto lock = std::lock_guard(shared->lock);
+                        auto lock = lock_guard(shared->lock);
                         REQUIRE(shared->another_lock.try_lock());
                         shared->another_lock.unlock();
                         shared->counter++;
@@ -294,7 +300,7 @@ TEST_SUITE("ProcessIdLock")
                     shared->counter++;
                     shared->lock.unlock();
                     for (;;) {
-                        auto lock = std::lock_guard(shared->lock);
+                        auto lock = lock_guard(shared->lock);
                         if (shared->counter >= num_processes) {
                             break;
                         }
@@ -303,7 +309,7 @@ TEST_SUITE("ProcessIdLock")
                     // Now go
                     for (int k = 0; k < 10000; ++k) {
                         std::this_thread::yield();
-                        auto lock = std::lock_guard(shared->lock);
+                        auto lock = lock_guard(shared->lock);
                         REQUIRE(shared->another_lock.try_lock());
                         shared->another_lock.unlock();
                         shared->counter++;
