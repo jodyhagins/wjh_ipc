@@ -6,6 +6,8 @@
 // ======================================================================
 #include "ProcessId.hpp"
 
+#include <cstdio>
+#include <limits>
 #include <sstream>
 
 #include <time.h>
@@ -57,7 +59,7 @@ start_time_of(pid_t pid)
     }
 
     // Convert jiffies to seconds + microseconds
-    struct timeval tv;
+    ::timeval tv;
     tv.tv_sec = static_cast<::time_t>(start_time_jiffies / hz);
     tv.tv_usec = static_cast<::suseconds_t>(
         (start_time_jiffies % hz) * (1'000'000 / hz));

@@ -27,14 +27,13 @@ You should also be able to use FetchContent.
 Here is how I do it.
 
 ```cmake
-message(STATUS "Processing third-party DocTest...")
 FetchContent_Declare(
     wjh_ipc
     GIT_REPOSITORY https://github.com/jodyhagins/wjh_ipc.git
     GIT_TAG main # or better, a specific tag/SHA
     SYSTEM
     )
-FetchContent_MakeAvailable(DocTest)
+FetchContent_MakeAvailable(wjh_ipc)
 
 # Then, when referencing it
 target_link_libraries(my_target PRIVATE wjh::ipc)
