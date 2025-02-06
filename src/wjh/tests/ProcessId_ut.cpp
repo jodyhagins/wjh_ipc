@@ -109,12 +109,10 @@ TEST_SUITE("ProcessId")
         ::tm tm_time;
         localtime_r(&tv.tv_sec, &tm_time);
         strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm_time);
-        snprintf(
-            buffer + strlen(buffer),
-            sizeof(buffer) - strlen(buffer),
-            ".%06d",
-            tv.tv_usec);
-        return std::string(buffer);
+        auto result = std::string(buffer);
+        snprintf(buffer, sizeof(buffer), ".%06d", int(tv.tv_usec));
+        result += buffer;
+        return result;
     };
 
     TEST_CASE("Can get process start time")
