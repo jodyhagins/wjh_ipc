@@ -9,6 +9,7 @@
 #include <thread>
 
 namespace wjh {
+using PID = ProcessId;
 
 bool
 ProcessIdLock::
@@ -58,8 +59,7 @@ try_lock_impl(ProcessId const & me)
 
     if (expected != me) {
         // Check to see if the process is still alive.
-        if (auto p = ProcessId::maybe(expected.pid()); not p || expected != *p)
-        {
+        if (auto p = PID::maybe(expected.pid()); not p || expected != *p) {
             // A process with that PID can't be found, or it has a different
             // value, which means it reclaimed the PID of a previous
             // process.  In reality, it could have been not found because of

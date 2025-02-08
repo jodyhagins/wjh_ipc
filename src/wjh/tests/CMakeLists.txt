@@ -11,7 +11,11 @@ add_executable(wjh_ipc_ut main.cpp
     )
 
 target_link_libraries(wjh_ipc_ut
-    PRIVATE wjh::ipc)
+    PRIVATE
+        wjh::ipc
+        Threads::Threads
+    )
+
 
 add_test(
     NAME "wjh_ipc Tests"

@@ -16,6 +16,8 @@
 #include <cstring>
 #include <new>
 
+#include <unistd.h>
+
 namespace {
 using wjh::ProcessId;
 
@@ -117,6 +119,9 @@ TEST_SUITE("ProcessId")
 
     TEST_CASE("Can get process start time")
     {
+        int fd[2];
+        REQUIRE(::pipe(fd) == 0);
+
         ::timeval before;
         gettimeofday(&before, nullptr);
         if constexpr (sizeof(ProcessId) == sizeof(std::uint64_t)) {
@@ -125,27 +130,39 @@ TEST_SUITE("ProcessId")
             ::usleep(1'000'000 / 100);
         }
         if (auto pid = ::fork(); pid == 0) {
+            char buf;
+            ::read(fd[0], &buf, 1);
             _Exit(0);
         } else {
             REQUIRE(pid != -1);
             auto child_id = ProcessId(pid);
+            write(fd[1], "x", 1);
+            ::close(fd[0]);
+            ::close(fd[1]);
             int status = -1;
             REQUIRE(::waitpid(pid, &status, 0) == pid);
             ::timeval after;
             gettimeofday(&after, nullptr);
             auto const child_start = child_id.start_time();
-            CHECK(to_string(before) < to_string(child_start));
-            CHECK(to_string(child_start) < to_string(after));
+            CHECK(to_string(before) <= to_string(child_start));
+            CHECK(to_string(child_start) <= to_string(after));
         }
     }
 
     TEST_CASE("Can construct with pid and start time")
     {
+        int fd[2];
+        REQUIRE(::pipe(fd) == 0);
         if (auto pid = ::fork(); pid == 0) {
+            char buf;
+            ::read(fd[0], &buf, 1);
             _Exit(0);
         } else {
             REQUIRE(pid != -1);
             auto child_id = ProcessId(pid);
+            write(fd[1], "x", 1);
+            ::close(fd[0]);
+            ::close(fd[1]);
             int status = -1;
             REQUIRE(::waitpid(pid, &status, 0) == pid);
             auto other = ProcessId(child_id.pid(), child_id.start_time());

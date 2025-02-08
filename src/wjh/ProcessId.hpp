@@ -122,7 +122,7 @@ struct ProcessId
     /**
      * The ProcessId for the calling process.
      */
-    static ProcessId current() { return ProcessId{::getpid()}; }
+    static ProcessId current();
 
     auto operator <=> (ProcessId const &) const = default;
 

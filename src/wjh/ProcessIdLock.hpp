@@ -59,8 +59,6 @@ struct ProcessIdLock
     void unlock();
 
 private:
-    using PID = wjh::ProcessId;
-
     bool exchange(ProcessId & expected, ProcessId const & desired);
     bool try_lock_impl(ProcessId const & me);
 

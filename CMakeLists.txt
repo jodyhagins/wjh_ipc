@@ -15,6 +15,14 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 include(Setup)
+string(REGEX REPLACE " ?-g ?" " -g3 " tmp "${CMAKE_CXX_FLAGS_DEBUG}")
+if (NOT ("${CMAKE_CXX_FLAGS_DEBUG}" STREQUAL "${tmp}"))
+    message(STATUS "Changing CMAKE_CXX_FLAGS_DEBUG from
+        '${CMAKE_CXX_FLAGS_DEBUG}' to '${tmp}'")
+    set(CMAKE_CXX_FLAGS_DEBUG "${tmp}")
+endif()
+
+find_package(Threads REQUIRED)
 include(FetchContent)
 include(CTest)
 include(CompileOptions)

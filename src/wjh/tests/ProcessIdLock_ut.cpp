@@ -32,9 +32,11 @@
 namespace {
 
 auto
-lock_guard(auto & lock)
+lock_guard(auto & lock, auto &&... args)
 {
-    return std::lock_guard<std::remove_reference_t<decltype(lock)>>(lock);
+    return std::lock_guard<std::remove_reference_t<decltype(lock)>>(
+        lock,
+        std::forward<decltype(args)>(args)...);
 }
 
 TEST_SUITE("ProcessIdLock")
@@ -56,7 +58,8 @@ TEST_SUITE("ProcessIdLock")
 
     static auto create_shared_lock_file = [] {
         auto [fd, path] = [] {
-            auto p = std::filesystem::temp_directory_path() / "proc_ut_XXXXXX";
+            auto p = std::filesystem::temp_directory_path() /
+                "ProcessIdLock_ut_XXXXXX";
             auto s = p.string();
             auto bytes = std::vector<char>(s.begin(), s.end());
             bytes.push_back('\0');
@@ -180,151 +183,187 @@ TEST_SUITE("ProcessIdLock")
         auto shared = mapped(guard.path);
         REQUIRE(shared);
 
+        auto timeit = []([[maybe_unused]] std::string_view name, auto && fn) {
+#if 0
+            auto start = std::chrono::steady_clock::now();
+            fn();
+            auto end = std::chrono::steady_clock::now();
+            MESSAGE([&] {
+                std::stringstream strm;
+                strm << "[" << name << "] "
+                    << std::chrono::duration<double>(end - start).count()
+                    << " seconds";
+                return strm.str();
+            }());
+#else
+            fn();
+#endif
+        };
+
         SUBCASE("Basic Lock/Unlock")
         {
-            REQUIRE(shared->lock.try_lock());
-            shared->lock.unlock();
+            timeit("Basic Lock/Unlock", [&] {
+                REQUIRE(shared->lock.try_lock());
+                shared->lock.unlock();
+            });
         }
 
         SUBCASE("Try-Lock Behavior")
         {
-            REQUIRE(shared->lock.try_lock());
-            CHECK(not shared->lock.try_lock()); // Second try should fail
-            shared->lock.unlock();
-            REQUIRE(shared->lock.try_lock()); // Now it should succeed again
-            shared->lock.unlock();
+            timeit("Try-Lock Behavior", [&] {
+                REQUIRE(shared->lock.try_lock());
+                CHECK(not shared->lock.try_lock()); // Second try should fail
+                shared->lock.unlock();
+                REQUIRE(shared->lock.try_lock()); // Now it should succeed again
+                shared->lock.unlock();
+            });
         }
 
         SUBCASE("Exclusive Lock Enforcement")
         {
-            auto t1_locked = std::latch{1};
-            auto t1_done = std::latch{1};
-            auto t2_ready = std::latch{1};
-            std::thread t1([&] {
-                shared->lock.lock();
-                t1_locked.count_down();
+            timeit("Exclusive Lock Enforcement", [&] {
+                auto t1_locked = std::latch{1};
+                auto t1_done = std::latch{1};
+                auto t2_ready = std::latch{1};
+                std::thread t1([&] {
+                    shared->lock.lock();
+                    t1_locked.count_down();
 
-                t2_ready.wait();
+                    t2_ready.wait();
 
-                shared->lock.unlock();
-                t1_done.count_down();
+                    shared->lock.unlock();
+                    t1_done.count_down();
+                });
+
+                std::thread t2([&] {
+                    t1_locked.wait();
+
+                    CHECK(not shared->lock.try_lock());
+                    t2_ready.count_down();
+
+                    t1_done.wait();
+
+                    REQUIRE(shared->lock.try_lock());
+                    shared->lock.unlock();
+                });
+
+                t1.join();
+                t2.join();
             });
-
-            std::thread t2([&] {
-                t1_locked.wait();
-
-                CHECK(not shared->lock.try_lock());
-                t2_ready.count_down();
-
-                t1_done.wait();
-
-                REQUIRE(shared->lock.try_lock());
-                shared->lock.unlock();
-            });
-
-            t1.join();
-            t2.join();
         }
 
         SUBCASE("Process Crash Recovery")
         {
-            // Parent gets lock.
-            shared->lock.lock();
-
-            pid_t pid = fork();
-            if (pid == 0) {
-                // Child waits for parent to release lock
+            timeit("Process Crash Recovery", [&] {
+                // Parent gets lock.
                 shared->lock.lock();
-                // Child exits without releasing lock
-                _exit(1);
-            } else {
-                // Parent releases lock and waits for child to exit
-                shared->lock.unlock();
 
-                // Here, the child is still running or is a zombie.
-                auto expired = std::chrono::high_resolution_clock::now() +
-                    std::chrono::seconds(30);
-                while (std::chrono::high_resolution_clock::now() < expired) {
-                    if (shared->lock.try_lock()) {
-                        shared->lock.unlock();
-                        break;
+                pid_t pid = fork();
+                if (pid == 0) {
+                    // Child waits for parent to release lock
+                    shared->lock.lock();
+
+                    // Child signals parent, and exits without releasing lock
+                    shared->counter = 42;
+                    _exit(1);
+                } else {
+                    // Parent releases lock and waits for child to exit
+                    shared->lock.unlock();
+
+                    // Here, the child is still running or is a zombie.
+                    auto expired = std::chrono::high_resolution_clock::now() +
+                        std::chrono::seconds(30);
+                    while (std::chrono::high_resolution_clock::now() < expired)
+                    {
+                        if (shared->lock.try_lock()) {
+                            auto lock = lock_guard(
+                                shared->lock,
+                                std::adopt_lock);
+                            if (shared->counter == 42) {
+                                break;
+                            }
+                        }
                     }
-                }
-                REQUIRE(shared->lock.try_lock());
-                shared->lock.unlock();
-                waitpid(pid, nullptr, 0);
+                    REQUIRE(shared->lock.try_lock());
+                    shared->lock.unlock();
+                    waitpid(pid, nullptr, 0);
 
-                REQUIRE(shared->lock.try_lock());
-                shared->lock.unlock();
-            }
+                    REQUIRE(shared->lock.try_lock());
+                    shared->lock.unlock();
+                }
+            });
         }
 
         SUBCASE("Concurrent Locking with Threads")
         {
-            int const num_threads = 10;
-            auto latch = std::latch{num_threads};
-            std::vector<std::thread> threads;
-            for (int i = 0; i < num_threads; ++i) {
-                threads.emplace_back([&] {
-                    // Wait for all threads to be running
-                    latch.count_down();
-                    latch.wait();
+            timeit("Concurrent Locking with Threads", [&] {
+                int const num_threads = 10;
+                auto latch = std::latch{num_threads};
+                std::vector<std::thread> threads;
+                for (int i = 0; i < num_threads; ++i) {
+                    threads.emplace_back([&] {
+                        // Wait for all threads to be running
+                        latch.count_down();
+                        latch.wait();
 
-                    // Now do work
-                    for (int k = 0; k < 10000; ++k) {
-                        std::this_thread::yield();
-                        auto lock = lock_guard(shared->lock);
-                        REQUIRE(shared->another_lock.try_lock());
-                        shared->another_lock.unlock();
-                        shared->counter++;
-                    }
-                });
-            }
-            for (auto & t : threads) {
-                t.join();
-            }
+                        // Now do work
+                        for (int k = 0; k < 10000; ++k) {
+                            // std::this_thread::yield();
+                            auto lock = lock_guard(shared->lock);
+                            REQUIRE(shared->another_lock.try_lock());
+                            shared->another_lock.unlock();
+                            shared->counter++;
+                        }
+                    });
+                }
+                for (auto & t : threads) {
+                    t.join();
+                }
 
-            REQUIRE(shared->lock.try_lock());
-            CHECK(shared->counter == 10000 * num_threads);
-            shared->lock.unlock();
+                REQUIRE(shared->lock.try_lock());
+                CHECK(shared->counter == 10000 * num_threads);
+                shared->lock.unlock();
+            });
         }
 
         SUBCASE("Concurrent Locking with Processes")
         {
-            int const num_processes = 10;
-            for (int i = 0; i < num_processes; ++i) {
-                pid_t pid = fork();
-                if (pid == 0) {
-                    // Wait for all processes to be running
-                    shared->lock.lock();
-                    shared->counter++;
-                    shared->lock.unlock();
-                    for (;;) {
-                        auto lock = lock_guard(shared->lock);
-                        if (shared->counter >= num_processes) {
-                            break;
-                        }
-                    }
-
-                    // Now go
-                    for (int k = 0; k < 10000; ++k) {
-                        std::this_thread::yield();
-                        auto lock = lock_guard(shared->lock);
-                        REQUIRE(shared->another_lock.try_lock());
-                        shared->another_lock.unlock();
+            timeit("Concurrent Locking with Processes", [&] {
+                int const num_processes = 10;
+                for (int i = 0; i < num_processes; ++i) {
+                    pid_t pid = fork();
+                    if (pid == 0) {
+                        // Wait for all processes to be running
+                        shared->lock.lock();
                         shared->counter++;
+                        shared->lock.unlock();
+                        for (;;) {
+                            auto lock = lock_guard(shared->lock);
+                            if (shared->counter >= num_processes) {
+                                break;
+                            }
+                        }
+
+                        // Now go
+                        for (int k = 0; k < 10000; ++k) {
+                            std::this_thread::yield();
+                            auto lock = lock_guard(shared->lock);
+                            REQUIRE(shared->another_lock.try_lock());
+                            shared->another_lock.unlock();
+                            shared->counter++;
+                        }
+                        _exit(0);
                     }
-                    _exit(0);
                 }
-            }
 
-            for (int i = 0; i < num_processes; ++i) {
-                wait(nullptr);
-            }
+                for (int i = 0; i < num_processes; ++i) {
+                    wait(nullptr);
+                }
 
-            REQUIRE(shared->lock.try_lock());
-            CHECK(shared->counter == num_processes * 10000 + num_processes);
-            shared->lock.unlock();
+                REQUIRE(shared->lock.try_lock());
+                CHECK(shared->counter == num_processes * 10000 + num_processes);
+                shared->lock.unlock();
+            });
         }
     }
 }
