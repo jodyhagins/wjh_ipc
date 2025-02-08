@@ -22,9 +22,9 @@ include(CTest)
 include(CompileOptions)
 
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-    option(WJH_PROC_BUILD_TESTS "whether or not to build tests" ON)
+    option(WJH_IPC_BUILD_TESTS "whether or not to build tests" ON)
 
-    if (WJH_PROC_BUILD_TESTS)
+    if (WJH_IPC_BUILD_TESTS)
         string(REGEX REPLACE "(^| )-g([0-9]?)( |$)" "\\1-g3\\3" tmp "${CMAKE_CXX_FLAGS_DEBUG}")
         if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" STREQUAL "${tmp}")
             message(STATUS "Changing CMAKE_CXX_FLAGS_DEBUG from '${CMAKE_CXX_FLAGS_DEBUG}' to '${tmp}'")

@@ -49,5 +49,5 @@ via FetchContent.
 
 The top-level cmake file is setup to allow building and running the tests
 when `CMAKE_CURRENT_SOURCE_DIR` and `CMAKE_SOURCE_DIR` are the same.
-You could also set `WJH_PROC_BUILD_TESTS` to have the tests built.
+You could also set `WJH_IPC_BUILD_TESTS` to have the tests built.
 Any test dependencies are handled automatically by FetchContent.

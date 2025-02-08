@@ -15,7 +15,7 @@ target_include_directories(wjh_ipc
     INTERFACE
         "${PROJECT_SOURCE_DIR}/src")
 
-if (WJH_PROC_BUILD_TESTS)
+    if (WJH_IPC_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
