@@ -1,0 +1,158 @@
+#!/bin/bash
+ROOT_DIR=$(git rev-parse --show-toplevel)
+
+find_env_files_upwards() {
+    local dir="${1:-$ROOT_DIR}"  # Start from the given directory or ROOT_DIR
+    local -a path_stack=()
+
+    # Traverse up the directory tree, collecting paths
+    while [ "$dir" != "/" ] && [ "$dir" != "$HOME" ]; do
+        path_stack+=("$dir")  # Store directories in a stack
+        dir=$(dirname "$dir")  # Move up one directory
+    done
+
+    # If we stopped at HOME and not root, add HOME to the stack
+    if [ "$dir" == "$HOME" ]; then
+        path_stack+=("$HOME")
+    fi
+
+    # Print the `.env` files, top-most directory first, handling spaces properly
+    for (( i=${#path_stack[@]}-1; i>=0; i-- )); do
+        local env_file="${path_stack[i]}/.env"
+        if [ -f "$env_file" ]; then
+            printf '%s\0' "$env_file"  # Print null-separated paths
+        fi
+    done
+}
+
+source_env_files_upwards() {
+    # Dump the current environment into the temp file safely
+    local tmp_env_file
+    tmp_env_file=$(mktemp)
+    {
+        while IFS= read -r var; do
+            # Skip readonly and special shell variables
+            if declare -p "$var" 2>/dev/null | grep -Eq '^-.[rR]'; then
+                continue  # Skip readonly variables
+            fi
+            case "$var" in
+                BASH_VERSINFO|EUID|PPID|SHELLOPTS|UID|GROUPS|FUNCNAME)
+                    continue
+                    ;;
+            esac
+            declare -p "$var" 2>/dev/null
+        done < <(compgen -v)
+    } > "$tmp_env_file"
+
+    # Collect all .env file paths into another temp file
+    local tmp_source_file
+    tmp_source_file=$(mktemp)
+    {
+        find_env_files_upwards "$PWD"
+        printf '%s\n' "$tmp_env_file"  # original environment file is last
+    } > "$tmp_source_file"
+
+    # Source everything in the parent shell
+    while IFS= read -r env_file; do
+        set -o allexport
+        source "$env_file"
+        set +o allexport
+    done < "$tmp_source_file"
+
+    # Clean up temp files
+    rm -f "$tmp_env_file" "$tmp_source_file"
+}
+
+source_env_files_upwards
+
+# === Step 0: Check if the environment variable WJH_FORMAT is set ===
+if [ -n "$WJH_FORMAT" ]; then
+    FORMATTER=$(command -v "$WJH_FORMAT")
+    if [ -n "$FORMATTER" ]; then
+        echo "✅ Using formatter from WJH_FORMAT: $WJH_FORMAT"
+    else
+        echo "⚠️ WJH_FORMAT is set but does not contain a valid formatter."
+    fi
+fi
+
+# === Step 1: Check if the environment variable WJH_IPC_BUILD_DIR is set ===
+if [ -n "$WJH_IPC_BUILD_DIR" ]; then
+    if [ -x "$WJH_IPC_BUILD_DIR/wjh_ipc_format_install/bin/clang-format" ]; then
+        FORMATTER="$WJH_IPC_BUILD_DIR/wjh_ipc_format_install/bin/clang-format"
+        echo "✅ Using formattter from WJH_IPC_BUILD_DIR: $FORMATTER"
+    else
+        echo "⚠️ WJH_IPC_BUILD_DIR is set but does not contain a valid formatter."
+    fi
+fi
+
+# === Step 2: Search for an appropriate CMake build directory ===
+if [ -z "$FORMATTER" ]; then
+    echo "🔍 Searching for formatter in project build directories..."
+    BUILD_DIRS=($(find . -type d -name "wjh_ipc_format_install" 2>/dev/null))
+
+    for dir in "${BUILD_DIRS[@]}"; do
+        if [ -f "$dir/bin/clang-format" ]; then
+            FORMATTER="$dir/bin/clang-format"
+            echo "✅ Found formatter in: $FORMATTER"
+            break
+        fi
+    done
+fi
+
+# === Step 3: Check common external build locations in $HOME ===
+if [ -z "$FORMATTER" ]; then
+    echo "🔍 Searching for formatter in common external build locations ($HOME/build and $HOME/.build)..."
+    for location in "$HOME/build" "$HOME/.build"; do
+        if [ -d "$location" ]; then
+            BUILD_DIRS=($(find "$location" -type d -name "wjh_ipc_format_install" 2>/dev/null))
+            for dir in "${BUILD_DIRS[@]}"; do
+                if [ -f "$dir/bin/clang-format" ]; then
+                    FORMATTER="$dir/bin/clang-format"
+                    echo "✅ Found formatter in: $FORMATTER"
+                    break 2  # Break both loops
+                fi
+            done
+        fi
+    done
+fi
+
+# === Step 4: Fall back to system-installed wjh-format ===
+if [ -z "$FORMATTER" ]; then
+    FORMATTER=$(command -v wjh-format)
+    if [ -n "$FORMATTER" ]; then
+        echo "✅ Using system-installed wjh-format: $FORMATTER"
+    fi
+fi
+
+# === Step 5: Fail if no formatter was found ===
+if [ -z "$FORMATTER" ]; then
+    echo "❌ Error: Could not find a formatter."
+    echo "💡 Please read the documentation about how to enable a formatter."
+    exit 1
+fi
+
+# === Step 6: Check only staged C++ files (do not reformat in-place) ===
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|ipp|h)$')
+
+# Exit early if no files need checking
+if [[ -z "$FILES" ]]; then
+    exit 0
+fi
+
+# === Step 7: Run clang-format to check formatting ===
+ERRORS=0
+
+for file in $FILES; do
+    if ! diff <($FORMATTER -style=file $file) $file >/dev/null; then
+        echo "❌ Formatting issue detected in $file"
+        echo "💡 Run '$FORMATTER -i $file' to fix."
+        ERRORS=1
+    fi
+done
+
+if [[ $ERRORS -ne 0 ]]; then
+    exit 1  # Reject commit
+fi
+
+echo "✅ Formatting check passed."
+exit 0  # Allow commit
