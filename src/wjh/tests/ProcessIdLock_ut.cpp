@@ -200,16 +200,14 @@ TEST_SUITE("ProcessIdLock")
 #endif
         };
 
-        SUBCASE("Basic Lock/Unlock")
-        {
+        SUBCASE("Basic Lock/Unlock") {
             timeit("Basic Lock/Unlock", [&] {
                 REQUIRE(shared->lock.try_lock());
                 shared->lock.unlock();
             });
         }
 
-        SUBCASE("Try-Lock Behavior")
-        {
+        SUBCASE("Try-Lock Behavior") {
             timeit("Try-Lock Behavior", [&] {
                 REQUIRE(shared->lock.try_lock());
                 CHECK(not shared->lock.try_lock()); // Second try should fail
@@ -219,8 +217,7 @@ TEST_SUITE("ProcessIdLock")
             });
         }
 
-        SUBCASE("Exclusive Lock Enforcement")
-        {
+        SUBCASE("Exclusive Lock Enforcement") {
             timeit("Exclusive Lock Enforcement", [&] {
                 auto t1_locked = std::latch{1};
                 auto t1_done = std::latch{1};
@@ -252,8 +249,7 @@ TEST_SUITE("ProcessIdLock")
             });
         }
 
-        SUBCASE("Process Crash Recovery")
-        {
+        SUBCASE("Process Crash Recovery") {
             timeit("Process Crash Recovery", [&] {
                 // Parent gets lock.
                 shared->lock.lock();
@@ -294,8 +290,7 @@ TEST_SUITE("ProcessIdLock")
             });
         }
 
-        SUBCASE("Concurrent Locking with Threads")
-        {
+        SUBCASE("Concurrent Locking with Threads") {
             timeit("Concurrent Locking with Threads", [&] {
                 int const num_threads = 10;
                 auto latch = std::latch{num_threads};
@@ -326,8 +321,7 @@ TEST_SUITE("ProcessIdLock")
             });
         }
 
-        SUBCASE("Concurrent Locking with Processes")
-        {
+        SUBCASE("Concurrent Locking with Processes") {
             timeit("Concurrent Locking with Processes", [&] {
                 int const num_processes = 10;
                 for (int i = 0; i < num_processes; ++i) {

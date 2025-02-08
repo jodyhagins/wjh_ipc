@@ -66,49 +66,39 @@ TEST_SUITE("Atomic")
 
     TEST_CASE("difference_type")
     {
-        SUBCASE("integral")
-        {
+        SUBCASE("integral") {
             CHECK(std::is_same_v<int, Atomic<int>::difference_type>);
         }
-        SUBCASE("floating point")
-        {
+        SUBCASE("floating point") {
             CHECK(std::is_same_v<float, Atomic<float>::difference_type>);
         }
-        SUBCASE("pointer")
-        {
+        SUBCASE("pointer") {
             CHECK(
                 std::is_same_v<std::ptrdiff_t, Atomic<int *>::difference_type>);
         }
-        SUBCASE("bool")
-        {
+        SUBCASE("bool") {
             CHECK(not is_valid<nested_difference_type, Atomic<bool>>);
         }
-        SUBCASE("T")
-        {
+        SUBCASE("T") {
             CHECK(not is_valid<nested_difference_type, Atomic<T>>);
         }
     }
 
     TEST_CASE("value_type")
     {
-        SUBCASE("integral")
-        {
+        SUBCASE("integral") {
             CHECK(std::is_same_v<int, Atomic<int>::value_type>);
         }
-        SUBCASE("floating point")
-        {
+        SUBCASE("floating point") {
             CHECK(std::is_same_v<float, Atomic<float>::value_type>);
         }
-        SUBCASE("pointer")
-        {
+        SUBCASE("pointer") {
             CHECK(std::is_same_v<int *, Atomic<int *>::value_type>);
         }
-        SUBCASE("bool")
-        {
+        SUBCASE("bool") {
             CHECK(std::is_same_v<bool, Atomic<bool>::value_type>);
         }
-        SUBCASE("T")
-        {
+        SUBCASE("T") {
             CHECK(std::is_same_v<T, Atomic<T>::value_type>);
         }
     }
