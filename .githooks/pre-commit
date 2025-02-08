@@ -1,5 +1,6 @@
 #!/bin/bash
 ROOT_DIR=$(git rev-parse --show-toplevel)
+VERBOSE=0
 
 find_env_files_upwards() {
     local dir="${1:-$ROOT_DIR}"  # Start from the given directory or ROOT_DIR
@@ -69,7 +70,9 @@ source_env_files_upwards
 if [ -n "$WJH_FORMAT" ]; then
     FORMATTER=$(command -v "$WJH_FORMAT")
     if [ -n "$FORMATTER" ]; then
-        echo "✅ Using formatter from WJH_FORMAT: $WJH_FORMAT"
+        if [ $VERBOSE -ne 0 ]; then
+            echo "✅ Using formatter from WJH_FORMAT: $WJH_FORMAT"
+        fi
     else
         echo "⚠️ WJH_FORMAT is set but does not contain a valid formatter."
     fi
@@ -79,7 +82,9 @@ fi
 if [ -n "$WJH_IPC_BUILD_DIR" ]; then
     if [ -x "$WJH_IPC_BUILD_DIR/wjh_ipc_format_install/bin/clang-format" ]; then
         FORMATTER="$WJH_IPC_BUILD_DIR/wjh_ipc_format_install/bin/clang-format"
-        echo "✅ Using formattter from WJH_IPC_BUILD_DIR: $FORMATTER"
+        if [ $VERBOSE -ne 0 ]; then
+            echo "✅ Using formattter from WJH_IPC_BUILD_DIR: $FORMATTER"
+        fi
     else
         echo "⚠️ WJH_IPC_BUILD_DIR is set but does not contain a valid formatter."
     fi
@@ -87,13 +92,17 @@ fi
 
 # === Step 2: Search for an appropriate CMake build directory ===
 if [ -z "$FORMATTER" ]; then
-    echo "🔍 Searching for formatter in project build directories..."
+    if [ $VERBOSE -ne 0 ]; then
+        echo "🔍 Searching for formatter in project build directories..."
+    fi
     BUILD_DIRS=($(find . -type d -name "wjh_ipc_format_install" 2>/dev/null))
 
     for dir in "${BUILD_DIRS[@]}"; do
         if [ -f "$dir/bin/clang-format" ]; then
             FORMATTER="$dir/bin/clang-format"
-            echo "✅ Found formatter in: $FORMATTER"
+            if [ $VERBOSE -ne 0 ]; then
+                echo "✅ Found formatter in: $FORMATTER"
+            fi
             break
         fi
     done
@@ -101,14 +110,18 @@ fi
 
 # === Step 3: Check common external build locations in $HOME ===
 if [ -z "$FORMATTER" ]; then
-    echo "🔍 Searching for formatter in common external build locations ($HOME/build and $HOME/.build)..."
+    if [ $VERBOSE -ne 0 ]; then
+        echo "🔍 Searching for formatter in common external build locations ($HOME/build and $HOME/.build)..."
+    fi
     for location in "$HOME/build" "$HOME/.build"; do
         if [ -d "$location" ]; then
             BUILD_DIRS=($(find "$location" -type d -name "wjh_ipc_format_install" 2>/dev/null))
             for dir in "${BUILD_DIRS[@]}"; do
                 if [ -f "$dir/bin/clang-format" ]; then
                     FORMATTER="$dir/bin/clang-format"
-                    echo "✅ Found formatter in: $FORMATTER"
+                    if [ $VERBOSE -ne 0 ]; then
+                        echo "✅ Found formatter in: $FORMATTER"
+                    fi
                     break 2  # Break both loops
                 fi
             done
@@ -120,7 +133,9 @@ fi
 if [ -z "$FORMATTER" ]; then
     FORMATTER=$(command -v wjh-format)
     if [ -n "$FORMATTER" ]; then
-        echo "✅ Using system-installed wjh-format: $FORMATTER"
+        if [ $VERBOSE -ne 0 ]; then
+            echo "✅ Using system-installed wjh-format: $FORMATTER"
+        fi
     fi
 fi
 
@@ -154,5 +169,7 @@ if [[ $ERRORS -ne 0 ]]; then
     exit 1  # Reject commit
 fi
 
-echo "✅ Formatting check passed."
+if [ $VERBOSE -ne 0 ]; then
+    echo "✅ Formatting check passed."
+fi
 exit 0  # Allow commit
