@@ -51,3 +51,32 @@ The top-level cmake file is setup to allow building and running the tests
 when `CMAKE_CURRENT_SOURCE_DIR` and `CMAKE_SOURCE_DIR` are the same.
 You could also set `WJH_IPC_BUILD_TESTS` to have the tests built.
 Any test dependencies are handled automatically by FetchContent.
+
+## Contributing
+
+Thank you for your interest in contributing to this project! Before you begin, follow these steps to get started:
+
+1️⃣ Switch to the `main` branch:
+```bash
+git checkout main
+```
+
+2️⃣ Read the `CONTRIBUTING.md` file in `main` for guidelines on contributing:
+- How to set up your environment.
+- How to create feature branches.
+- Our coding standards.
+
+3️⃣ Create a new feature branch:
+```bash
+git checkout -b my-feature-branch
+```
+
+4️⃣ Submit your changes via a pull request for review. 🎉
+
+---
+
+### **Important Notes**
+- Always create new branches based on `main` to avoid conflicts.
+- PRs must pass all pre-commit checks before they can be merged.
+
+Happy coding! 🚀
