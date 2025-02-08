@@ -121,8 +121,8 @@ TEST_SUITE("ProcessId")
 
     TEST_CASE("Can get process start time")
     {
-        int fd[2];
-        REQUIRE(::pipe(fd) == 0);
+        std::array<int, 2> fd;
+        REQUIRE(::pipe(fd.data()) == 0);
 
         ::timeval before;
         gettimeofday(&before, nullptr);
@@ -153,8 +153,8 @@ TEST_SUITE("ProcessId")
 
     TEST_CASE("Can construct with pid and start time")
     {
-        int fd[2];
-        REQUIRE(::pipe(fd) == 0);
+        std::array<int, 2> fd;
+        REQUIRE(::pipe(fd.data()) == 0);
         if (auto pid = ::fork(); pid == 0) {
             char buf;
             ignore(::read(fd[0], &buf, 1));
