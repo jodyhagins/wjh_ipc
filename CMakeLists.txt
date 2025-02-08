@@ -15,12 +15,6 @@ list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 include(Setup)
-string(REGEX REPLACE " ?-g ?" " -g3 " tmp "${CMAKE_CXX_FLAGS_DEBUG}")
-if (NOT ("${CMAKE_CXX_FLAGS_DEBUG}" STREQUAL "${tmp}"))
-    message(STATUS "Changing CMAKE_CXX_FLAGS_DEBUG from
-        '${CMAKE_CXX_FLAGS_DEBUG}' to '${tmp}'")
-    set(CMAKE_CXX_FLAGS_DEBUG "${tmp}")
-endif()
 
 find_package(Threads REQUIRED)
 include(FetchContent)
@@ -31,6 +25,12 @@ if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     option(WJH_PROC_BUILD_TESTS "whether or not to build tests" ON)
 
     if (WJH_PROC_BUILD_TESTS)
+        string(REGEX REPLACE "(^| )-g([0-9]?)( |$)" "\\1-g3\\3" tmp "${CMAKE_CXX_FLAGS_DEBUG}")
+        if (NOT "${CMAKE_CXX_FLAGS_DEBUG}" STREQUAL "${tmp}")
+            message(STATUS "Changing CMAKE_CXX_FLAGS_DEBUG from '${CMAKE_CXX_FLAGS_DEBUG}' to '${tmp}'")
+            set(CMAKE_CXX_FLAGS_DEBUG "${tmp}")
+        endif()
+
         message(STATUS "Processing third-party DocTest...")
         FetchContent_Declare(
             DocTest
