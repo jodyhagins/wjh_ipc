@@ -117,6 +117,8 @@ TEST_SUITE("ProcessId")
         return result;
     };
 
+    auto ignore = [](auto &&) {};
+
     TEST_CASE("Can get process start time")
     {
         int fd[2];
@@ -131,12 +133,12 @@ TEST_SUITE("ProcessId")
         }
         if (auto pid = ::fork(); pid == 0) {
             char buf;
-            (void)::read(fd[0], &buf, 1);
+            ignore(::read(fd[0], &buf, 1));
             _Exit(0);
         } else {
             REQUIRE(pid != -1);
             auto child_id = ProcessId(pid);
-            (void)::write(fd[1], "x", 1);
+            ignore(::write(fd[1], "x", 1));
             ::close(fd[0]);
             ::close(fd[1]);
             int status = -1;
@@ -155,12 +157,12 @@ TEST_SUITE("ProcessId")
         REQUIRE(::pipe(fd) == 0);
         if (auto pid = ::fork(); pid == 0) {
             char buf;
-            (void)::read(fd[0], &buf, 1);
+            ignore(::read(fd[0], &buf, 1));
             _Exit(0);
         } else {
             REQUIRE(pid != -1);
             auto child_id = ProcessId(pid);
-            (void)::write(fd[1], "x", 1);
+            ignore(::write(fd[1], "x", 1));
             ::close(fd[0]);
             ::close(fd[1]);
             int status = -1;

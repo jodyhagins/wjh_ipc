@@ -10,6 +10,7 @@
 #include <cstring>
 #include <limits>
 #include <sstream>
+#include <string_view>
 #include <utility>
 
 #include <pthread.h>
@@ -55,6 +56,7 @@ with_file_contents(char const * fname, FnT && fn, ErrT && err)
     std::size_t size = 8 * 1024;
     for (;;) {
         auto buffer = static_cast<char *>(alloca(size));
+        ::memset(buffer, 0, size);
         std::size_t n;
         if (auto nread = ::read(fd, buffer, size - 1); nread <= 0) {
             ::close(fd);
@@ -64,7 +66,6 @@ with_file_contents(char const * fname, FnT && fn, ErrT && err)
             ::lseek(fd, 0, SEEK_SET);
             continue;
         }
-        buffer[n] = '\0';
         ::close(fd);
 
         if constexpr (std::is_invocable_v<FnT, char const *>) {
@@ -92,22 +93,25 @@ get_boot_time()
     };
     return with_file_contents(
         "/proc/stat",
-        [&](char const * buffer) {
-            auto q = ::strstr(buffer, "\nbtime ");
-            if (q) {
-                q += 7;
-            } else if (::strncmp(buffer, "btime ", 6) == 0) {
-                q = buffer;
-            } else {
+        [&](std::string_view buffer) {
+            if (auto n = buffer.find("\nbtime "); n < buffer.size()) {
+                buffer.remove_prefix(n + 7);
+            } else if (not buffer.starts_with("btime")) {
                 errno = ENOENT;
                 error();
             }
-            return ::atoi(q);
+            return ::atoi(buffer.data());
         },
         [&] { return error(), 0; });
 }
 
+    #if defined(__clang__)
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wglobal-constructors"
+    #endif
 static ::time_t const boot_time = get_boot_time();
+    #if defined(__clang__)
+    #endif
 
 std::optional<::timeval>
 start_time_of(pid_t pid)
