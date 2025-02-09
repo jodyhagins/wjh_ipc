@@ -7,9 +7,6 @@
 #define DOCTEST_CONFIG_ASSERTS_RETURN_VALUES
 #include "wjh/ProcessId.hpp"
 
-#include "doctest.hpp"
-#include "rapidcheck.hpp"
-
 #include <sys/wait.h>
 
 #include <cstdlib>
@@ -17,6 +14,9 @@
 #include <new>
 
 #include <unistd.h>
+
+#include "testing/doctest.hpp"
+#include "testing/rapidcheck.hpp"
 
 namespace {
 using wjh::ProcessId;

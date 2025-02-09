@@ -6,14 +6,14 @@
 // ======================================================================
 #include "wjh/Atomic.hpp"
 
-#include "doctest.hpp"
-#include "rapidcheck.hpp"
-
 #include <chrono>
 #include <latch>
 #include <numeric>
 #include <thread>
 #include <vector>
+
+#include "testing/doctest.hpp"
+#include "testing/rapidcheck.hpp"
 
 namespace {
 using wjh::Atomic;

@@ -7,7 +7,7 @@
 
 #if 1
     #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-    #include "doctest.hpp"
+    #include "testing/doctest.hpp"
 #else
     #define DOCTEST_CONFIG_IMPLEMENT
     #include "doctest.hpp"

@@ -15,6 +15,9 @@ target_link_libraries(procid_ut
         rapidcheck_doctest
         doctest
     )
+target_include_directories(procid_ut
+    PRIVATE
+        "${PROJECT_SOURCE_DIR}")
 set_target_properties(procid_ut
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
@@ -32,6 +35,9 @@ target_link_libraries(atomic_ut
         rapidcheck_doctest
         doctest
     )
+target_include_directories(atomic_ut
+    PRIVATE
+        "${PROJECT_SOURCE_DIR}")
 set_target_properties(atomic_ut
     PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")

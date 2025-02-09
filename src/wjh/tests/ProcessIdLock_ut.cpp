@@ -7,9 +7,6 @@
 #define DOCTEST_CONFIG_ASSERTS_RETURN_VALUES
 #include "wjh/ProcessIdLock.hpp"
 
-#include "doctest.hpp"
-#include "rapidcheck.hpp"
-
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -28,6 +25,9 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+
+#include "testing/doctest.hpp"
+#include "testing/rapidcheck.hpp"
 
 namespace {
 
