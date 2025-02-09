@@ -9,10 +9,52 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      #- name: Checkout repository
-        #uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Assign labels based on PR content
-        uses: serubin/labeler@master
-        env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: match-wip
+        with:
+          text: ${{ github.event.pull_request.title }}
+          regex: "^WIP[ :]"
+          flags: 'gi'
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.match-wip.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'WIP'
+
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: match-bug
+        with:
+          text: ${{ github.event.pull_request.title }}
+          regex: "fix|bug|error|issue"
+          flags: 'gi'
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.match-bug.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'bug'
+
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: match-enhancement
+        with:
+          text: ${{ github.event.pull_request.title }}
+          regex: "feature|add|update|improve"
+          flags: 'gi'
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.match-enhancement.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'enhancement'
+
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: match-doc
+        with:
+          text: ${{ github.event.pull_request.title }}
+          regex: "docs|readme|contributing|wiki"
+          flags: 'gi'
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.match-doc.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'documentation'
