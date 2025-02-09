@@ -16,8 +16,13 @@ jobs:
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Debug Evaluated Labels
+      - name: Debug Regex Matches
         run: |
           echo "PR Title: ${{ github.event.pull_request.title }}"
           echo "PR Body: ${{ github.event.pull_request.body }}"
+          echo "Labeler File Contents:"
           cat .github/labeler.yml
+          echo "Testing 'fix' regex on title:"
+          echo "${{ github.event.pull_request.title }}" | grep -Ei 'fix'
+          echo "Testing 'readme' regex on body:"
+          echo "${{ github.event.pull_request.body }}" | grep -Ei 'readme'
