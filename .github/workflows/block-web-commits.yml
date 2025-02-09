@@ -1,0 +1,24 @@
+name: Block Web UI Commits
+
+on: [push, pull_request]
+
+jobs:
+  check-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Verify Commit Author
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --pretty=format:'%ae')
+          AUTHOR_NAME=$(git log -1 --pretty=format:'%an')
+          ALLOWED_USER="jodyhagins"
+          if [[ "$AUTHOR_EMAIL" == *"noreply@github.com" ]]; then
+            if [[ "$AUTHOR_NAME" != "$ALLOWED_USER" ]]; then
+              echo "🚨 ERROR: Direct commits via GitHub UI are not allowed!"
+              exit 1
+            else
+              echo "✅ Commit made via Web UI by $ALLOWED_USER, allowing it."
+            fi
+          fi
