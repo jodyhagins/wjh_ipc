@@ -1,9 +1,9 @@
 #!/bin/bash
-ROOT_DIR=$(git rev-parse --show-toplevel)
+GIT_ROOT=$(git rev-parse --show-toplevel)
 VERBOSE=0
 
 find_env_files_upwards() {
-    local dir="${1:-$ROOT_DIR}"  # Start from the given directory or ROOT_DIR
+    local dir="${1:-$GIT_ROOT}"  # Start from the given directory or GIT_ROOT
     local -a path_stack=()
 
     # Traverse up the directory tree, collecting paths
@@ -66,6 +66,7 @@ source_env_files_upwards() {
 
 source_env_files_upwards
 
+
 # === Step 0: Check if the environment variable WJH_FORMAT is set ===
 if [ -n "$WJH_FORMAT" ]; then
     FORMATTER=$(command -v "$WJH_FORMAT")
@@ -78,6 +79,7 @@ if [ -n "$WJH_FORMAT" ]; then
     fi
 fi
 
+
 # === Step 1: Check if the environment variable WJH_IPC_BUILD_DIR is set ===
 if [ -n "$WJH_IPC_BUILD_DIR" ]; then
     if [ -x "$WJH_IPC_BUILD_DIR/wjh_ipc_format_install/bin/clang-format" ]; then
@@ -89,6 +91,7 @@ if [ -n "$WJH_IPC_BUILD_DIR" ]; then
         echo "⚠️ WJH_IPC_BUILD_DIR is set but does not contain a valid formatter."
     fi
 fi
+
 
 # === Step 2: Search for an appropriate CMake build directory ===
 if [ -z "$FORMATTER" ]; then
@@ -107,6 +110,7 @@ if [ -z "$FORMATTER" ]; then
         fi
     done
 fi
+
 
 # === Step 3: Check common external build locations in $HOME ===
 if [ -z "$FORMATTER" ]; then
@@ -129,6 +133,7 @@ if [ -z "$FORMATTER" ]; then
     done
 fi
 
+
 # === Step 4: Fall back to system-installed wjh-format ===
 if [ -z "$FORMATTER" ]; then
     FORMATTER=$(command -v wjh-format)
@@ -139,6 +144,7 @@ if [ -z "$FORMATTER" ]; then
     fi
 fi
 
+
 # === Step 5: Fail if no formatter was found ===
 if [ -z "$FORMATTER" ]; then
     echo "❌ Error: Could not find a formatter."
@@ -146,28 +152,48 @@ if [ -z "$FORMATTER" ]; then
     exit 1
 fi
 
+
 # === Step 6: Check only staged C++ files (do not reformat in-place) ===
 FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(cpp|hpp|ipp|h)$')
-
 # Exit early if no files need checking
 if [[ -z "$FILES" ]]; then
     exit 0
 fi
+unstaged=0
+for FILE in $FILES; do
+    if git diff --name-only | grep -Fxq "$FILE"; then
+        echo "❌ File '$FILE' has unstaged changes."
+        unstaged=1
+    fi
+done
+if [[ $unstaged -ne 0 ]]; then
+    exit 1  # Reject commit
+fi
+
 
 # === Step 7: Run clang-format to check formatting ===
 ERRORS=0
 
+tmp=$(mktemp)
+echo '# everything below here' > $tmp
+echo "    pushd $GIT_ROOT" >> $tmp
 for file in $FILES; do
     if ! diff <($FORMATTER -style=file $file) $file >/dev/null; then
         echo "❌ Formatting issue detected in $file"
-        echo "💡 Run '$FORMATTER -i $file' to fix."
+        echo "    $FORMATTER -i '$file'" >> $tmp
+        echo "    git add '$file'" >> $tmp
         ERRORS=1
     fi
 done
+echo "    popd" >>$tmp
+echo '# everything above here' >> $tmp
 
 if [[ $ERRORS -ne 0 ]]; then
+    echo "💡 Run the following commands to fix."
+    cat $tmp
     exit 1  # Reject commit
 fi
+rm -f "$tmp"
 
 if [ $VERBOSE -ne 0 ]; then
     echo "✅ Formatting check passed."
