@@ -22,6 +22,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: 'WIP'
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ steps.match-wip.outputs.match == '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'WIP'
 
       - uses: actions-ecosystem/action-regex-match@v2
         id: match-bug
@@ -31,6 +36,11 @@ jobs:
           flags: 'gi'
       - uses: actions-ecosystem/action-add-labels@v1
         if: ${{ steps.match-bug.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'bug'
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ steps.match-bug.outputs.match == '' }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: 'bug'
@@ -46,6 +56,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: 'enhancement'
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ steps.match-enhancement.outputs.match == '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'enhancement'
 
       - uses: actions-ecosystem/action-regex-match@v2
         id: match-doc
@@ -55,6 +70,11 @@ jobs:
           flags: 'gi'
       - uses: actions-ecosystem/action-add-labels@v1
         if: ${{ steps.match-doc.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'documentation'
+      - uses: actions-ecosystem/action-remove-labels@v1
+        if: ${{ steps.match-doc.outputs.match == '' }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           labels: 'documentation'
