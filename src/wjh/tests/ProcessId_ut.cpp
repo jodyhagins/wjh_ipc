@@ -121,34 +121,59 @@ TEST_SUITE("ProcessId")
 
     TEST_CASE("Can get process start time")
     {
-        std::array<int, 2> fd;
-        REQUIRE(::pipe(fd.data()) == 0);
+        std::array<int, 2> to_child, to_parent;
+        REQUIRE(::pipe(to_child.data()) == 0);
+        REQUIRE(::pipe(to_parent.data()) == 0);
 
-        ::timeval before;
-        gettimeofday(&before, nullptr);
-        if constexpr (sizeof(ProcessId) == sizeof(std::uint64_t)) {
-            ::usleep(1'000'000 * 3 / 2);
-        } else {
-            ::usleep(1'000'000 / 100);
-        }
+        char ch_buf;
+        ProcessId before_id;
         if (auto pid = ::fork(); pid == 0) {
-            char buf;
-            ignore(::read(fd[0], &buf, 1));
+            ignore(::write(to_parent[1], "x", 1));
+            ignore(::read(to_child[0], &ch_buf, 1));
             _Exit(0);
         } else {
             REQUIRE(pid != -1);
-            auto child_id = ProcessId(pid);
-            ignore(::write(fd[1], "x", 1));
-            ::close(fd[0]);
-            ::close(fd[1]);
-            int status = -1;
-            REQUIRE(::waitpid(pid, &status, 0) == pid);
-            ::timeval after;
-            gettimeofday(&after, nullptr);
-            auto const child_start = child_id.start_time();
-            CHECK(to_string(before) <= to_string(child_start));
-            CHECK(to_string(child_start) <= to_string(after));
+            ignore(::read(to_parent[0], &ch_buf, 1));
+            before_id = ProcessId(pid);
+            ignore(::write(to_child[1], "x", 1));
+            REQUIRE(::waitpid(pid, nullptr, 0) == pid);
         }
+
+        ::timeval before, child_start{};
+        gettimeofday(&before, nullptr);
+        auto const expire = std::chrono::steady_clock::now() +
+            std::chrono::seconds(30);
+        while (std::chrono::steady_clock::now() < expire &&
+               to_string(before) > to_string(child_start))
+        {
+            ::usleep(1000000 / 100);
+            ::close(to_child[0]);
+            ::close(to_child[1]);
+            ::close(to_parent[0]);
+            ::close(to_parent[1]);
+            REQUIRE(::pipe(to_child.data()) == 0);
+            REQUIRE(::pipe(to_parent.data()) == 0);
+            if (auto pid = ::fork(); pid == 0) {
+                ignore(::write(to_parent[1], "x", 1));
+                ignore(::read(to_child[0], &ch_buf, 1));
+                _Exit(0);
+            } else {
+                REQUIRE(pid != -1);
+                ignore(::read(to_parent[0], &ch_buf, 1));
+                auto child_id = ProcessId(pid);
+                ignore(::write(to_child[1], "x", 1));
+                REQUIRE(::waitpid(pid, nullptr, 0) == pid);
+                REQUIRE(child_id.pid() == pid);
+                child_start = child_id.start_time();
+                CHECK(
+                    to_string(before_id.start_time()) <=
+                    to_string(child_start));
+                if (to_string(before) <= to_string(child_start)) {
+                    break;
+                }
+            }
+        }
+        CHECK(to_string(before) <= to_string(child_start));
     }
 
     TEST_CASE("Can construct with pid and start time")
