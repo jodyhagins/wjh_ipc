@@ -1,0 +1,17 @@
+bug:
+  - '(?i)fix'   # Case-insensitive match for "fix"
+  - '(?i)bug'
+  - '(?i)error'
+  - '(?i)issue'
+
+enhancement:
+  - '(?i)feature'
+  - '(?i)add'
+  - '(?i)update'
+  - '(?i)improve'
+
+documentation:
+  - '(?i)docs'
+  - '(?i)readme'
+  - '(?i)contributing'
+  - '(?i)wiki'
