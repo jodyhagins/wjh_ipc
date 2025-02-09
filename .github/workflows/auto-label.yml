@@ -9,21 +9,10 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      #- name: Checkout repository
+        #uses: actions/checkout@v3
 
       - name: Assign labels based on PR content
-        uses: actions/labeler@v4
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Debug Regex Matches
-        run: |
-          echo "PR Title: ${{ github.event.pull_request.title }}"
-          echo "PR Body: ${{ github.event.pull_request.body }}"
-          echo "Labeler File Contents:"
-          cat .github/labeler.yml
-          echo "Testing 'fix' regex on title:"
-          echo "${{ github.event.pull_request.title }}" | grep -Ei 'fix'
-          echo "Testing 'readme' regex on body:"
-          echo "${{ github.event.pull_request.body }}" | grep -Ei 'readme'
+        uses: serubin/labeler@master
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
