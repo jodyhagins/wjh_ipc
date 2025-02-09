@@ -1,17 +1,19 @@
-bug:
-  - '(?i)fix'   # Case-insensitive match for "fix"
-  - '(?i)bug'
-  - '(?i)error'
-  - '(?i)issue'
-
-enhancement:
-  - '(?i)feature'
-  - '(?i)add'
-  - '(?i)update'
-  - '(?i)improve'
-
-documentation:
-  - '(?i)docs'
-  - '(?i)readme'
-  - '(?i)contributing'
-  - '(?i)wiki'
+labels:
+- label: "WIP"
+  title: "^WIP[ :]"
+- label: "bug"
+  title: "(?i)(fix|bug|error|issue)"
+- label: "enhancement"
+  title: "(?i)(feature|add|update|improve)"
+- label: "documentation"
+  title: "(?i)(docs|readme|contributing|wiki)"
+- label: "S"
+  size-below: 10
+- label: "M"
+  size-above: 9
+  size-below: 50
+- label: "L"
+  size-above: 49
+  size-below: 100
+- label: "XL"
+  size-above: 100
